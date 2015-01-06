@@ -1,0 +1,52 @@
+./Bootstrap.sh
+CC="mipsel-motorola-linux-uclibc-gcc" LIBS="-L/root/SDK/bcm45/3pp/lib" CPPFLAGS="-I/root/SDK/bcm45/3pp/include -I/root/SDK/bcm45/epp/vms610/linux/include" ./configure --host=i686 --target=mips
+
+Modify examples/bot.c to allow host configuration
+    char *jid, *pass, *host;
+
+    /* take a jid and password on the command line */
+    if (argc < 3 || argc > 4) {
+        fprintf(stderr, "Usage: bot <jid> <pass>\n\n");
+        return 1;
+    }
+    
+    jid = argv[1];
+    pass = argv[2];
+    host = NULL;
+  
+    if (argc == 4)
+       host = argv[3];
+    /* init library */
+
+…
+
+    /* initiate connection */
+    xmpp_connect_client(conn, host, 0, conn_handler, ctx);
+
+Modify src/sha1.h, add to the very top of the file:
+Intention of defining __SHA1_H is to avoid this file contents
+    #include <openssl/sha.h>
+    #define SHA1_CTX SHA_CTX
+    #define SHA1_DIGEST_SIZE SHA_DIGEST_LENGTH
+    #define SHA1_Final(x,y) SHA1_Final(y,x)
+    #define __SHA1_H
+
+Modify src/sha1.c:
+    #if 0
+    … (everything in the whole file)
+    #endif
+
+Modify src/scram.c:
+    #if 0
+    static void SHA1(const uint8_t* data, size_t len,
+                 uint8_t digest[SHA1_DIGEST_SIZE])
+    {
+        SHA1_CTX ctx;
+        SHA1_Init(&ctx);
+        SHA1_Update(&ctx, data, len);
+        SHA1_Final(&ctx, digest); 
+    }
+    #endif
+
+Lib strophe should compile and run correctly using the VMS’s built-in openssl library.
+Now whether or not the other (non-plaintext) authentication methods work….we’ll see.
