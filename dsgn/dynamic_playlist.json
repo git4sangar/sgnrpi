@@ -1,0 +1,18 @@
+{
+	"ver"	: "1.0",
+	"ads" :
+	[ 
+		{	"id"	: 1,
+			"url"	: "http://www.mp4url1.com/",
+			"type"	: 2,
+			"format": 3,
+			"width" : 1080,
+			"height": 780,
+			"aratio": 1,
+			"trkrS"	: "http://www.tracker_url_start.com/",
+			"trkrE"	: "http://www.tracker_url_end.com/",
+			"nextAd": 0,
+			"prevAd": 0
+		}
+	]
+}

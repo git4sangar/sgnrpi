@@ -1,0 +1,50 @@
+gn
+
+(01) video file url
+(02) type -> image or video
+(03) format -> jpg,png or mp4,mkv
+(04) version info of this playlist
+(05) width and height
+(06) trackers -> start and end
+(07) resolution
+(08) video id
+(09) playlist id
+
+
+(01) playlist version
+(02) schedule id
+
+(02) asset id
+(03) asset url
+(04) type -> image or video
+(05) format -> jpg, png (or) mp4, mkv
+(06) width and height
+(07) resolution
+(08) tracker start and end
+(10) start time
+
+
+{
+	"ver"	: int, // a running number
+	"ads" :
+	[ 
+		{	"id"	: int,
+			"url"	: "url",
+			"type"	: int, // 0 -> image, 1 -> video
+			"format": int, // 0 -> jpg, 1 -> png, 2 -> mp4, 3 -> mkv
+			"width" : int,
+			"height": int,
+			"aratio": int,
+			"trkrS"	: "url",	// tracker containing device-uuid, device-ver, sch-id, asset-id, start or stop, time in "hh:mm:ss"
+			"trkrE"	: "url",	// tracker containing device-uuid, device-ver, sch-id, asset-id, start or stop, time in "hh:mm:ss"
+			"nextAd": int,		// id of the next ad to be played
+			"prevAd": int,		// id of the ad after which this is to be played
+			"date_time"	: "YYYY-MM-DD hh:mm:ss" // Eg: "2001-11-14 18:31:01". Daily at this time this video starts.
+		}, ...{}, {}
+	]
+}
+
+device has to sync the time and zone with server
+
+sort timer pending
+

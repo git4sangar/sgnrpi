@@ -1,0 +1,37 @@
+http://www.cnx-software.com/2012/02/18/raspberry-pi-opengl-and-openmax-il-hello-world-applications/
+
+http://jan.newmarch.name/LinuxSound/Diversions/RaspberryPiOpenMAX/
+
+
+http://www.jvcref.com/files/PI/documentation/html/   => talks about the MMAL architecture
+http://benosteen.wordpress.com/2012/04/23/first-steps-with-the-raspberry-pi/ -> some examples
+
+contains the explanation for posix time zone string
+http://www.ibm.com/developerworks/aix/library/au-aix-posix/
+
+contains the timezone strings in olson format
+http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+
+int main ()
+{
+  time_t rawtime;
+  struct tm * timeinfo;
+  char pEnv[64] = "string" ;
+  //setenv("TZ", "CET6CEST5 30,M4.5.0/02:00:00,M10.5.0/03:00:00", 1);
+  setenv("TZ", "Australia/Hobart", 1);
+  tzset();
+  strcpy(pEnv, getenv("TZ"));
+  time(&rawtime);
+  timeinfo = localtime(&rawtime);
+  printf("Current local time and date: %s\n", asctime(timeinfo));
+  printf("Env variable: %s\n", pEnv);
+  return 0;
+}
+
+problem: no audio over hdmi
+solution: http://www.raspberrypi.org/forums/viewtopic.php?t=5062
+in /boot/config.txt set hdmi_drive=2, reboot raspberry, it works
+
+
+linux application programming tutorial
+http://www.delorie.com/gnu/docs/glibc/libc_toc.html#SEC_Contents
