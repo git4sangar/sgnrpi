@@ -1,0 +1,135 @@
+===========================
+pf_yume_sdk directory is the c_sdk.
+
+pf_sample_app directory is a test program using simulated player which can test multiple ad contexts in parallel.
+
+pf_intelce_app directory is a demo program for the intel board using their cl_app test player as a callable player.
+
+pf_demo_sim_app directory is version of the pf_intelce_app using simulated player for debug on the host.
+===========================
+build packages needed for build for host
+
+# build log4c for host and install in /usr/local
+cd log4c-1.2.1
+./configure
+make
+sudo make install
+===========================
+build packages needed for build for IntelCE target (OR LG Mips)
+
+# source script to set shell variables needed to make
+# "configure" script work for IntelCE cross compile.
+# after building source for target exit shell to drop these defs
+source pre_configure_source_vars_intelce.sh
+# or for LG use "source pre_configure_source_vars_lgmips.sh"
+
+# for --prefix arguments below use $HOME/intelce for Intel or $HOME/lgmips for LG Mips or $HOME/lgarml9 for LG ARM L9
+
+# build log4c for target
+tar xvzf log4c-1.2.1.tar.gz
+cd log4c-1.2.1
+./configure --without-expat --build=x86_64-unknown-linux-gnu --host=x86-unknown-linux-gnu --prefix=$HOME/intelce
+make
+make install
+
+# build libxml2 for target
+tar xvzf libxml2-2.7.8.tar.gz
+cd libxml2-2.7.8
+./configure --build=x86_64-unknown-linux-gnu --host=x86-unknown-linux-gnu --prefix=$HOME/intelce
+make
+make install
+
+# build curl for target
+tar xvzf curl-7.21.4.tar.gz
+cd curl-7.21.4
+./configure --build=x86_64-unknown-linux-gnu --host=x86-unknown-linux-gnu --prefix=$HOME/intelce
+make
+make install
+
+#### the following is to build glib for LG mips ##########
+# build gettext which is needed to build glib
+tar xvzf gettext-0.18.1.1.tar.gz
+cd gettext-0.18.1.1
+./configure --build=x86_64-unknown-linux-gnu --host=x86-unknown-linux-gnu --prefix=$HOME/intelce
+# edit Makefile and change the "subdirs = " and "SUBDIRS = " lines to remove "gettest-tools"
+make
+make install
+
+# build glib
+tar xvzf glib-2.12.3.tar.gz
+cd glib-2.12.3
+# Edit "configure" script, after each occurance of error message "error: cannot run test program while cross compiling"
+# change the following line like "   { (exit 1); exit 1; }; }" to be "  }".
+./configure --build=x86_64-unknown-linux-gnu --host=mipsel-linux-gnu --prefix=$HOME/lgmipsel 
+make
+make install
+###############################################
+
+===========================
+# To build using make using the include file "common.mk" use the build flags as follows:
+
+# to build for Linux host
+make clean HOSTBUILD=1
+make clean INTELCEBUILD=1
+make clean LGMIPSBUILD=1
+make clean LGARML9BUILD=1
+make HOSTBUILD=1
+
+# to build for IntelCE target
+make clean HOSTBUILD=1
+make clean INTELCEBUILD=1
+make clean LGMIPSBUILD=1
+make clean LGARML9BUILD=1
+make INTELCEBUILD=1
+
+# to build for LG Mips target
+make clean HOSTBUILD=1
+make clean INTELCEBUILD=1
+make clean LGMIPSBUILD=1
+make clean LGARML9BUILD=1
+make LGMIPSBUILD=1
+
+# to build for LG ARM target
+make clean HOSTBUILD=1
+make clean INTELCEBUILD=1
+make clean LGMIPSBUILD=1
+make clean LGARML9BUILD=1
+make LGARML9BUILD=1
+
+# to build for release add "RELEASE=1" to make command
+===========================
+
+# Additional step for compiling under uClibc
+============================================
+# Use the following for configuration
+./configure --build=x86_64-unknown-linux-gnu --host=mips-linux-uclibc --prefix=$HOME/devel/lgmipsuClibc 
+
+# The host=***-linux-uclibc is not applicable for libxml2 compilation as it does not have uClibc specific configure option 
+use host=***-linux-gnu for libxml2 alone
+
+#### the following added changes for gettext for uClibc ##########
+# gettext compilation for uClibc configuration has known issues
+# After running configure, run make will throw error,do the following 
+
+vim gettext-tools/gnulib-lib/spawn.h
+
+# include <sched.h> // Add this line in the header file so that it includes the header 
+#ifndef __GLIBC__
+# include <sched.h>
+
+
+#### the following additional changes to build glib for uClibc ##########
+# for ARM
+./configure --build=x86_64-unknown-linux-gnu --host=arm-linux-uclibc --prefix=$HOME/devel/lgarmuClibc 
+# for MIPS
+./configure --build=x86_64-unknown-linux-gnu --host=mips-linux-uclibc --prefix=$HOME/devel/lgmipsuClibc 
+# for MIPSEL
+./configure --build=x86_64-unknown-linux-gnu --host=mipsel-linux-uclibc --prefix=$HOME/devel/lgmipseluClibc 
+
+# glib compilation for uClibc configuration has known issues
+# After running configure, run make will throw error,do the following 
+
+vim tests/Makefile.am
+
+#remove the references of compilation of "errorcheck-mutex-test" from the Makefile
+================================================================
