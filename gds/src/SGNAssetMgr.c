@@ -34,13 +34,13 @@ typedef struct {
 	int iReqCount;
 	int iFreeSpaceMB;
 	int iSpaceReqd;
-	sgn_bool isDwldSucceeded;
 }SGN_AssetMgr;
 
 typedef enum {
 	eNewPlaylist,
 	eMakeHeadReq,
 	eMakeDwldReq,
+	eCheckSpace,
 	eRecoverSpace
 }AssetMgrReqMsg;
 
@@ -54,6 +54,7 @@ typedef struct {
 	sgn_bool isReqTimedOut;
 	SGN_AssetMgr *pAssetMgr;
 	sgn_list *pNextAd;
+	PlaylistData *pAd;
 }AssetDwldReq;
 
 SGN_AssetMgrHandle initAssetManager(SGN_LogHandle hLogger, SGN_DwldHandle hDownloader,
@@ -108,77 +109,113 @@ int downloadPlaylistData(SGN_AssetMgrHandle hAssetMgr, sgn_list_t *pPlaylist) {
 	return 0;
 }
 
-int makeHeadRequest(SGN_AssetMgr *pAssetMgr, sgn_list_t *pCurrent) {
+int makeRequest(SGN_AssetMgr *pAssetMgr, sgn_list_t *pCurrent, sgn_bool isHead) {
+	SGNCB_DwldComplete cbComplete = NULL;
 	if(NULL == pAssetMgr || NULL == pCurrent) {
 		return -1;
 	}
-
-	logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Entering makeHeadRequest for URL: %s");
+	logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Entering makeRequest");
 	PlaylistData *pAd	= (PlaylistData *)pCurrent->data;
 	char *pAssetName	= sgn_get_name_from_url(pAd->pUrl);
-	if(!isAssetAvailable(pAssetName)) {
-		logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Asset: %s is not available in cache", pAssetName);
-		AssetDwldReq *pAssetReq	= calloc(sizeof(SGN_AssetReq), 1);
-		pAssetReq->iReqId		= sgn_get_unique_no();
-		pAssetReq->pNextAd		= pCurrent->next;
-		pAssetReq->pAssetMgr	= pAssetMgr;
-		pAssetMgr->iReqCount++;
-		pAssetMgr->pDwldReqQ	= sgn_list_append(pAssetMgr->pDwldReqQ, pAssetReq);
-		startDownload(pAssetMgr->hDwldHandle, pAd->pUrl, pAssetMgr->pDwldReqQ, NULL,
-						sgn_true, sgn_false, headReqComplete, pAssetReq->iReqId);
-	} else {
+	if(isHead && isAssetAvailable(pAssetName)) {
 		logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Asset: %s is available in cache", pAssetName);
-		return -1;
+		return 0;
 	}
+
+	if(isHead) {
+		logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Making head request for URL: %s", pAd->pUrl);
+		cbComplete	= headReqComplete;
+	} else {
+		logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Making download request for URL: %s", pAd->pUrl);
+		cbComplete	= dwlReqComplete;
+	}
+	AssetDwldReq *pAssetReq	= calloc(sizeof(SGN_AssetReq), 1);
+	pAssetReq->iReqId		= sgn_get_unique_no();
+	pAssetReq->pNextAd		= pCurrent->next;
+	pAssetReq->pAssetMgr	= pAssetMgr;
+	pAssetReq->pAd			= pCurrent->data;
+	pAssetMgr->iReqCount++;
+	pAssetMgr->pDwldReqQ	= sgn_list_append(pAssetMgr->pDwldReqQ, pAssetReq);
+	sgn_bool isFile			= (sgn_false == isHead);
+	startDownload(pAssetMgr->hDwldHandle, pAd->pUrl, pAssetMgr->pDwldReqQ, NULL, isHead, isFile, cbComplete, pAssetReq->iReqId);
+	logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Exiting makeRequest");
 	return 0;
 }
 
-int initiateHeadRequests(SGN_AssetMgrHandle hAssetMgr, sgn_list_t *pPlaylist) {
-	if(NULL == hAssetMgr) {
-		return -1;
-	}
-
-	SGN_AssetMgr *pAssetMgr = (SGN_AssetMgr *)hAssetMgr;
-	pAssetMgr->isDwldSucceeded = sgn_true;	// will be set to false when download fails
+int initiateHeadRequests(SGN_AssetMgr *pAssetMgr, sgn_list_t *pPlaylist) {
 	logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Entering initiateHeadRequests");
-	if(NULL == pPlaylist) {
-		logPrint(pAssetMgr->hLogHandle, LogLevelError, "Invalid params to startAssetDownload");
-		return -1;
-	}
-
 	sgn_list_t *pList	= sgn_list_first(pPlaylist);
-	makeHeadRequest(pAssetMgr, pList);
+	makeRequest(pAssetMgr, pList, sgn_true);
+	logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Exiting initiateHeadRequests");
 	return 0;
 }
 
-void headReqComplete(int status, void *pHeadOrBuf, void *pUserData, int iReqId) {
+int initiateDownloadRequests(SGN_AssetMgr *pAssetMgr) {
+	logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Entering initiateDownloadRequests");
+	sgn_list_t *pList	= sgn_list_first(pPlaylist);
+	makeRequest(pAssetMgr, pList, sgn_false);
+	logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Exiting initiateDownloadRequests");
+	return 0;
+}
+
+void checkSpaceForAssets(SGN_AssetMgr *pAssetMgr) {
+	//	if space not available, make request to recover
+	//	otherwise, make download request
+
+	//	Now we are assuming enough space is there and proceeding to make download request
+	AssetThrdTask *pReq		= calloc(sizeof(AssetMgrDwldReq), 1);
+	pReq->iReqMsg			= eMakeDwldReq;
+	pReq->pData				= pAssetMgr;
+}
+
+void headReqComplete(int status, void *pHeadSize, void *pUserData, int iReqId) {
 	if(NULL == pUserData || 0 >= iReqId) {
 		return;
 	}
 	sgn_list_t *pDwldReqQ	= (sgn_list_t *)pUserData;
 	AssetDwldReq *pAssetReq = (AssetDwldReq *)getDwldReqFromId(pDwldReqQ, iReqId);
 	SGN_AssetMgr *pAssetMgr = (SGN_AssetMgr *)pAssetReq->pAssetMgr;
-	logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Entering headReqComplete");
+	logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Entering headReqComplete for URL: %s", pAssetReq->pAd->pUrl);
 
-	if(pAssetReq->isReqTimedOut) {
+	if(pAssetReq->isReqTimedOut || DOWNLOAD_NO_ERROR != status) {
 		logPrint(pAssetMgr->hLogHandle, LogLevelFatal, "Head request timedout");
 		pAssetMgr->pAssetDwldComple(sgn_false, pAssetMgr->pUserData);
+		return;
 	}
-	pAssetMgr->isDwldSucceeded = pAssetMgr->isDwldSucceeded && (status == DOWNLOAD_NO_ERROR);
-	pAssetMgr->iReqCount--;
-	unsigned int iHeadSize = 0;
+	unsigned int iHeadSize		= 0;
 	memcpy((void *)&iHeadSize, pHeadOrBuf, sizeof(unsigned int));
-	pAssetMgr->iSpaceReqd	+= iHeadSize;
+	pAssetReq->pAd->assetSize	= iHeadSize;
+	pAssetMgr->iSpaceReqd		+= iHeadSize;
+	pAssetMgr->iReqCount--;
 	if(0 >= pAssetMgr->iReqCount) {
 		//	check if space available for all
-		//	make asset download request
+		AssetThrdTask *pReq		= calloc(sizeof(AssetMgrDwldReq), 1);
+		pReq->iReqMsg			= eCheckSpace;
+		pReq->pData				= pAssetMgr;
+		sgn_async_queue_push(pAssetMgr->pAssetReqQ, pReq);
 	} else {
 		//	make next head request
-		makeHeadRequest(hAssetMgr, pAssetReq->pNextAd);
+		makeRequest(hAssetMgr, pAssetReq->pNextAd, sgn_true);
 	}
 }
 
-void postReqComplete(int status, int iReqId, sgn_bool isHead, void *pData){}
+void dwlReqComplete(int status, void *pBuffer, void *pUserData, int iReqId) {
+	if(NULL == pUserData || 0 >= iReqId) {
+		return;
+	}
+	sgn_list_t *pDwldReqQ	= (sgn_list_t *)pUserData;
+	AssetDwldReq *pAssetReq = (AssetDwldReq *)getDwldReqFromId(pDwldReqQ, iReqId);
+	SGN_AssetMgr *pAssetMgr = (SGN_AssetMgr *)pAssetReq->pAssetMgr;
+	logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Entering dwlReqComplete for URL: %s", pAssetReq->pAd->pUrl);
+	pAssetMgr->iReqCount--;
+	if(0 >= pAssetMgr->iReqCount) {
+		logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Asset download successfully complete");
+		pAssetMgr->pAssetDwldComple(sgn_true, pAssetMgr->pUserData);
+	} else {
+		makeRequest(hAssetMgr, pAssetReq->pNextAd, sgn_false);
+	}
+	logPrint(pAssetMgr->hLogHandle, LogLevelInfo, "Exiting dwlReqComplete");
+}
 
 int loadAssetList(SGN_AssetMgrHandle hAssetMgr, char *pDirWithSlash, char *pFileName) {
 	if(NULL == hAssetMgr) {

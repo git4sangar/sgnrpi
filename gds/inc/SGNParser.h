@@ -55,6 +55,7 @@ typedef struct {
 	int			iPrevAd;
 	ARatio		eAspectRatio;
 	struct tm	*pDateTime;
+	int			assetSize;
 }PlaylistData;
 
 sgn_list_t *parsePlaylist(char *pJsonPacket, SGN_LogHandle hLogHandle);
