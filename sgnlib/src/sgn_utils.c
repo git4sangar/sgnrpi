@@ -6,6 +6,9 @@
  */
 
 #include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sgn_string.h>
 
 int gUniqueRunningNo;
 pthread_mutex_t *pUniqueMtx = NULL;
@@ -39,7 +42,7 @@ char *sgn_get_name_from_url(char *pURL) {
 		prevPtr = ptr;
 	}
 
-	if (prevPtr && *pprevPtr) {
+	if (prevPtr && *prevPtr) {
 		return sgn_strdup(prevPtr);
 	}
 

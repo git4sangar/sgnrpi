@@ -51,7 +51,7 @@ sgn_list_t *parsePlaylist(char *pJsonPacket, SGN_LogHandle hLogHandle) {
 		pAd->pUrl		= sgn_strdup(json_object_get_string(pJobj));
 		if(NULL == sgn_get_name_from_url(pAd->pUrl)) {
 			logPrint(hLogHandle, LogLevelFatal, "Download url: %s without file name", pAd->pUrl);
-			reutrn NULL;
+			return NULL;
 		}
 
 		pJobj			= json_object_object_get(pAdObj, "type");

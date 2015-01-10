@@ -11,16 +11,19 @@
 #include "sgn_timer.h"
 
 
-void onDwldComplete(int status, int iReqId, sgn_bool isHead,  void *pData);
+void onDwldComplete(int status, void *pHeadOrBuf, void *pUserData, int iReqId);
+void assetDwldComplete(sgn_bool status, void *pUserData);
 void onTimerExpiry(SGN_TimerHandle pHandle, void *pUserData);
 
 int main(void) {
-	SGN_LogHandle hLogHandle	= initLogger(MAX_LOG_FILE_SIZE_MB);
-	SGN_DwldHandle hDwldHandle	= initDownloader(hLogHandle);
-
+	SGN_Handle *hSgnMgr		= calloc(sizeof(SGN_Handle), 1);
+	hSgnMgr->hLogHandle		= initLogger(MAX_LOG_FILE_SIZE_MB);
+	hSgnMgr->hDownloader	= initDownloader(hSgnMgr->hLogHandle);
+	hSgnMgr->hAssetMgr		= initAssetManager(hSgnMgr->hLogHandle, hSgnMgr->hDownloader, assetDwldComplete, hSgnMgr);
+	char *pURL = "http://www.madhangi.com/sgn/dynamic_playlist.json";
+	startDownload(hSgnMgr->hDownloader, pURL, hSgnMgr, NULL, sgn_false, sgn_false, onDwldComplete, 1);
 	//char *pURL = "http://shadowcdn-01.yumenetworks.com/ym/229/suSCSNRo_384K_480x360.mp4";
-	char *pURL = "http://www.madhangi.com/dynamic_preroll_playlist.vast2xml";
-	startDownload(hDwldHandle, pURL, "shampoo.mp4", NULL, sgn_false, sgn_false, onDwldComplete, 10);
+	//char *pURL = "http://www.madhangi.com/dynamic_preroll_playlist.vast2xml";
 
 	/*FILE *fp = fopen("/home/sangar/proj/rpi/dsgn/dynamic_playlist.json", "r");
 	char jsonPkt[2048];
@@ -37,20 +40,12 @@ int main(void) {
 	return 0;
 }
 
-void onDwldComplete(int status, int iReqId, sgn_bool isHead,  void *pData) {
-	unsigned int headSize = 0;
-	char *pXml = NULL;
+void assetDwldComplete(sgn_bool status, void *pUserData) {}
 
-	if(NULL != pData) {
-		if(isHead) {
-			memcpy((void *)&headSize, pData, sizeof(unsigned int));
-		} else {
-			pXml = pData;
-		}
-	}
-	printf("Download status: %d, iReqId: %d, headSize: %d\n", status, iReqId, headSize);
-	printf("XML file is \n%s\n\n\n", pXml);
-	if(pData) free(pData);
+void onDwldComplete(int status, void *pHeadOrBuf, void *pUserData, int iReqId) {
+	SGN_Handle *hSgnMgr	= (SGN_Handle *)pUserData;
+	sgn_list_t *pAdList = parsePlaylist(pHeadOrBuf, hSgnMgr->hLogHandle);
+	downloadPlaylistData(hSgnMgr->hAssetMgr, pAdList);
 }
 
 void onTimerExpiry(SGN_TimerHandle pHandle, void *pUserData) {

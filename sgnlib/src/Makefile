@@ -2,7 +2,7 @@
 
 CFLAGS += -I../inc 
 
-SRCS = sgn_list.c sgn_queue.c sgn_timer.c sgn_string.c
+SRCS = sgn_list.c sgn_queue.c sgn_timer.c sgn_string.c sgn_utils.c
 OBJS = $(SRCS:.c=.o)
 
 TARGET = libsgnlib.a

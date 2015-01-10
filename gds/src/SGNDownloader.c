@@ -62,20 +62,6 @@ SGN_DwldHandle initDownloader(SGN_LogHandle logHandle) {
 		return NULL;
 	}
 
-	//	Create curl handle
-	pDwldHandle->pCurl = curl_easy_init();
-	if(NULL == pDwldHandle->pCurl) {
-		logPrint(logHandle, LogLevelError, "Error initializing curl");
-		return NULL;
-	}
-	curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_NOSIGNAL, 1);			// tell multi thread app
-	curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_FOLLOWLOCATION, 1);	// automatic redirection
-	curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_MAXREDIRS, 5);			// max redirection
-	curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_CONNECTTIMEOUT, DEFAULT_CONN_TIME_OUT);
-	curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
-	curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_LOW_SPEED_LIMIT, DOWNLOAD_MIN_SPEED);
-	curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_LOW_SPEED_TIME, DEFAULT_READ_TIME_OUT);
-
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
@@ -148,11 +134,19 @@ void *downloadThread(void *pUserInfo) {
 			return NULL;
 		}
 
-		//	clear a little structures
-		curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_POSTFIELDS, NULL);
-		curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_HEADERFUNCTION, NULL);
-		curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_WRITEHEADER, NULL);
-
+		//	Create curl handle
+		pDwldHandle->pCurl = curl_easy_init();
+		if(NULL == pDwldHandle->pCurl) {
+			logPrint(pDwldHandle->pLogHandle, LogLevelError, "Error initializing curl");
+			return NULL;
+		}
+		curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_NOSIGNAL, 1);			// tell multi thread app
+		curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_FOLLOWLOCATION, 1);	// automatic redirection
+		curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_MAXREDIRS, 5);			// max redirection
+		curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_CONNECTTIMEOUT, DEFAULT_CONN_TIME_OUT);
+		curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+		curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_LOW_SPEED_LIMIT, DOWNLOAD_MIN_SPEED);
+		curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_LOW_SPEED_TIME, DEFAULT_READ_TIME_OUT);
 		curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_URL, pDwlReq->pUrl);
 		curl_easy_setopt(pDwldHandle->pCurl, CURLOPT_WRITEDATA, pDwlReq);
 
@@ -183,6 +177,7 @@ void *downloadThread(void *pUserInfo) {
 		} else {
 			pBuffer = (pDwlReq->pRespString) ? pDwlReq->pRespString->str : NULL;
 		}
+		curl_easy_cleanup(pDwldHandle->pCurl); pDwldHandle->pCurl = NULL;
 		pDwlReq->pDwldComplete(iRet, pBuffer, pDwlReq->pUserData, pDwlReq->iReqId);
 
 		sgn_string_free(pDwlReq->pRespString, sgn_false);
