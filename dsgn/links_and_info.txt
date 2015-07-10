@@ -34,6 +34,10 @@ problem: no audio over hdmi
 solution: http://www.raspberrypi.org/forums/viewtopic.php?t=5062
 in /boot/config.txt set hdmi_drive=2, reboot raspberry, it works
 
+Also one can try this
+Under https://ubuntu-mate.org/raspberry-pi/  inside "Hardware accelerated video"
+sudo amixer cset numid=3 2
+
 
 linux application programming tutorial
 http://www.delorie.com/gnu/docs/glibc/libc_toc.html#SEC_Contents
