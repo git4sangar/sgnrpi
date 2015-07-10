@@ -2,6 +2,8 @@ http://www.cnx-software.com/2012/02/18/raspberry-pi-opengl-and-openmax-il-hello-
 
 http://jan.newmarch.name/LinuxSound/Diversions/RaspberryPiOpenMAX/
 
+For redirecting the console to serial and disabling the loging
+https://mike632t.wordpress.com/2014/02/25/low-cost-digital-signage/
 
 http://www.jvcref.com/files/PI/documentation/html/   => talks about the MMAL architecture
 http://benosteen.wordpress.com/2012/04/23/first-steps-with-the-raspberry-pi/ -> some examples
