@@ -2,6 +2,12 @@ sgn
 
 Good tutorial for learning OpenMAX RaspberryPi
 http://jan.newmarch.name/RPi/index.html
+To render jpg over omx video
+https://www.raspberrypi.org/forums/viewtopic.php?f=33&t=75282
+"Hello- I'm trying to overlay a JPEG (using OpenVG) over an OpenMAX decoded mp4. My problem is that when the video starts, it's running on a layer above the OpenVG JPEG image. Does anyone know a of a way to move the OpenVG image to the top of the Z-order? Thanks, any suggestions are greatly appreciated."
+Ans: This is hard to say without any pointers on how you display your video and your jpeg. Most likely you have a vc_dispmanx_element_add call somewhere in your VG setup code. The third parameter is the VG layer. For your video setup you probably call OMX_SetParameter somewhere with a OMX_CONFIG_DISPLAYREGIONTYPE structure. The layer member of that structure is the video layer. Now make sure that the VG layer is higher than the video layer and your jpeg should be displayed on top of the video.
+Thanks hjimbens, for putting me on the right track. I was able to adjust the layers, set the opacity and it's working. Also, I actually needed to use OMX_SetConfig with OMX_CONFIG_DISPLAYREGIONTYPE struct to set the layer. Thanks again!
+
 
 
 http://www.cnx-software.com/2012/02/18/raspberry-pi-opengl-and-openmax-il-hello-world-applications/
